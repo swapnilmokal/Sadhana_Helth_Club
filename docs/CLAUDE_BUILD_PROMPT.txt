@@ -1,0 +1,15 @@
+CLAUDE BUILD PROMPT — साधना हेल्थ अँड न्यूट्रिशन सेंटर (Sadhana Health & Nutrition Center)
+
+Build a production-ready system from this repository specification. Create TWO separate mobile-first PWAs: user-app for members and admin-app for the center owners (wellness coaches Bhagwan Mokal and Sadhana Mokal; admin mobile 9702389779). Use Google Apps Script as JSON API and Google Sheets as private database. Never expose credentials or Sheet secrets in GitHub. Read MASTER_PROCEDURE.txt and GOOGLE_SHEET_SCHEMA.csv first.
+
+USER: login/register, consent, dashboard, profile, Day-1 assessment, height/weight/BMI/BP/sugar/pulse/body measurements, daily health updates, steps/water/sleep/activity, goals, progress charts, before/after photos, health updates, calendar, appointments, notifications, attendance, About & Contact (owner photos, phone 9702389779), privacy.
+
+ADMIN: secure login, combined dashboard, members, full member profiles, health monitoring, progress/activity, photos, updates, calendar/appointments, notifications, attendance, reports, goals/follow-ups, staff roles, audit log, About & Contact, settings and export.
+
+RULES: never overwrite historical daily records; member sees only own data; admin sees authorized club data; server-side authentication/authorization; consent before sensitive health/photo storage; private photo storage; audit admin changes; no diagnosis engine; clear wellness-tracking disclaimer.
+
+UI: professional green/white wellness design, mobile-first, bottom navigation, cards, charts, touch-friendly controls, responsive desktop/tablet.
+
+PHASES: Sheet schema -> Apps Script API -> auth/roles -> User PWA -> Admin PWA -> photo storage -> calendar/notifications -> analytics -> PWA/offline -> security testing -> deployment.
+
+Test against every acceptance test in MASTER_PROCEDURE.txt and provide deployment instructions for Google Sheets, Apps Script and GitHub Pages.

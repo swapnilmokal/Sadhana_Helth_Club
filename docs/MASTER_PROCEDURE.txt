@@ -1,0 +1,73 @@
+साधना हेल्थ अँड न्यूट्रिशन सेंटर (SADHANA HEALTH & NUTRITION CENTER) PWA — MASTER FUNCTION & PROCEDURE MAP
+
+1. PURPOSE
+Two installable PWAs: USER APP for each center member and ADMIN APP for the center owners (wellness coaches Bhagwan Mokal and Sadhana Mokal). Track Day-1 baseline, daily health/wellness logs, activities, goals, progress charts, before/after photos, health updates, calendar, appointments, notifications, attendance and combined center analytics.
+
+2. USER APP
+Login/Register; Consent; Home Dashboard; Profile; Day-1 Baseline; Daily Health Update; Body Measurements; Activity/Steps/Water/Sleep; Goals; Progress Charts; Before/After Photos; Health Updates; Calendar; Appointments; Notifications; Attendance; About & Contact; Privacy; Logout.
+
+3. ADMIN APP
+Secure Login; Combined Dashboard; Member Management; Full Member Profile; Health Monitoring; Daily Progress; Activity; Before/After Photos; Health Updates; Calendar/Appointments; Notifications; Attendance; Reports; Goals/Follow-ups; Staff Roles; Audit Log; About & Contact; Settings; Export/Backup.
+
+4. DAY-1 FLOW
+Register -> consent -> admin verifies -> baseline assessment -> height/weight/BMI/BP/sugar/pulse/waist/hip and configured fields -> save MEMBER_HEALTH_PROFILE -> save first DAILY_HEALTH_LOG -> set goals -> start timeline.
+
+5. DAILY FLOW
+User opens Daily Update -> enters permitted measurements/activity -> client validation -> server validation -> append DAILY_HEALTH_LOG -> refresh user dashboard -> flag/update admin dashboard. Never overwrite historical records.
+
+6. BMI
+BMI = kg / (metres x metres). Use only as a tracking metric and do not infer diagnosis from it.
+
+7. BEFORE/AFTER
+Select BEFORE/AFTER, view (front/side/back), date, caption and consent -> upload to private storage -> save reference in BEFORE_AFTER_PHOTOS -> show only to authorized user/admin -> support consent revocation/deletion.
+
+8. HEALTH UPDATE
+User can add personal wellness/activity update. Admin can add follow-up note. Store author/date/time. Avoid unrestricted public display of sensitive data.
+
+9. PROGRESS
+Day 1 baseline -> daily logs -> weekly/monthly summaries -> goals -> trend charts -> photo timeline -> follow-up reminders.
+
+10. ADMIN COMBINED DATA
+Total members, active members, visits today, updates today, appointments, pending follow-ups, tracking coverage, activity coverage, goal progress and configurable aggregate trends. Filters by date/member/status/group.
+
+11. CALENDAR
+Center visit, measurement day, appointment, progress review, reminder and center event. User sees own events; admin sees authorized center events.
+
+12. NOTIFICATIONS
+Daily update reminder, appointment reminder, missed update, progress review, admin announcement, goal milestone and follow-up. Store status/readAt.
+
+13. ATTENDANCE
+User check-in or admin mark -> date/check-in/check-out/status/actor -> admin daily/monthly report -> corrections audited.
+
+14. GOOGLE SHEETS
+Recommended tabs: CONFIG, ADMINS, MEMBERS, MEMBER_HEALTH_PROFILE, DAILY_HEALTH_LOG, BODY_MEASUREMENTS, GOALS, PROGRESS_LOG, BEFORE_AFTER_PHOTOS, HEALTH_UPDATES, ACTIVITY_LOG, APPOINTMENTS, CALENDAR, NOTIFICATIONS, ATTENDANCE, MEMBER_NOTES, PRODUCTS, ORDERS, ORDER_ITEMS, PAYMENTS, AUDIT_LOG, SETTINGS.
+
+15. API
+GET: config, members, member, dailyLogs, healthUpdates, appointments, notifications, adminDashboard. POST: login, register, createMember, updateMember, createDailyHealthLog, createHealthUpdate, createActivity, createAppointment, cancelAppointment, uploadPhoto, createGoal, markNotificationRead, attendance, adminNote.
+
+16. SECURITY
+Server-side authentication/authorization; never trust browser role; no credentials in GitHub; HTTPS; private Sheet/photo storage; minimum necessary data; audit log; consent; retention/deletion; backup. User can see only own data; admin can see authorized members.
+
+17. PWA
+manifest + service worker; mobile-first; installable; cache app shell only; do not blindly cache private API responses.
+
+18. GITHUB STRUCTURE
+user-app/index.html + css + js + manifest + service-worker + icons + images (owner photos); admin-app/index.html + css + js + manifest + service-worker + icons + images (owner photos); backend/Code.gs; database/GOOGLE_SHEET_SCHEMA.csv; docs/CLAUDE_BUILD_PROMPT.txt.
+
+19. CLAUDE IMPLEMENTATION ORDER
+Read this file -> build Sheet schema -> Apps Script API -> auth/roles -> User PWA -> Admin PWA -> private photo storage -> calendar/notifications -> analytics -> PWA/offline -> security testing -> GitHub Pages deployment.
+
+20. ACCEPTANCE TESTS
+New member registers; admin sees member; Day-1 saves; daily update saves; history remains; admin sees combined data; photo metadata saves with restricted access; user cannot see other users; appointments work; notifications work; reports aggregate; audit log records admin changes; PWA installs; no secrets in frontend.
+
+21. PRIVACY/HEALTH NOTE
+Health measurements and photos are sensitive. Use consent and appropriate privacy/security controls. This app is for record keeping and wellness tracking, not diagnosis or medical treatment.
+
+22. ABOUT & CONTACT (BOTH APPS)
+Shows the center name (साधना हेल्थ अँड न्यूट्रिशन सेंटर), the owners as Wellness Coaches — भगवान मोकल (Bhagwan Mokal) and साधना मोकल (Sadhana Mokal) — with their photos (images/bhagwan-mokal.jpg, images/sadhana-mokal.jpg), and the contact number 9702389779 with Call and WhatsApp buttons. Edit the CENTER constant in js/api.js to change these details.
+
+23. ADMIN LOGIN
+Admin mobile number: 9702389779. Demo mode uses a mobile + PIN check in the browser (default PIN 1234 — change it in More > Settings). Production MUST replace this with server-side authentication (see backend/Code.gs, ADMIN_KEY / real login).
+
+24. DEMO MODE
+While API_URL in js/api.js is not configured, both apps run on sample data stored in the browser (localStorage key sadhana_db_v1). user-app and admin-app served from the same origin (for example GitHub Pages) share this demo data, so a member registered in the user app appears in the admin app. Demo data is per browser/device only.

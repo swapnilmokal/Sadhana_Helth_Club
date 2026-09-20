@@ -1,0 +1,16 @@
+{
+  "name": "साधना हेल्थ अँड न्यूट्रिशन सेंटर — Admin",
+  "short_name": "साधना Admin",
+  "description": "Sadhana Health & Nutrition Center — Admin App",
+  "lang": "mr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#075b2b",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
