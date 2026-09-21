@@ -71,3 +71,17 @@ Admin mobile number: 9702389779. Demo mode uses a mobile + PIN check in the brow
 
 24. DEMO MODE
 While API_URL in js/api.js is not configured, both apps run on sample data stored in the browser (localStorage key sadhana_db_v1). user-app and admin-app served from the same origin (for example GitHub Pages) share this demo data, so a member registered in the user app appears in the admin app. Demo data is per browser/device only.
+
+24b. DEMO MODE (updated)
+Without config.js the apps run on sample data stored in that browser only. With config.js (API_URL) they run in SERVER MODE — see section 25.
+
+25. SERVER MODE (v2): LOGIN, SYNC, STORAGE, BACKUP
+- Login: member = own mobile number + PIN; admin = admin mobile + PIN. PIN is stored only as a salted hash on the server. 5 wrong tries lock the account for 15 minutes.
+- PIN: member/admin can change their own PIN; admin can reset a member's PIN (temporary PIN, member must set a new one); a PIN reset or status change to Inactive logs the person out on all devices.
+- Admin can edit all member details (name, login mobile, DOB, gender, address, emergency contact, status, height, goal); members can edit their own profile and goal. Health history is append-only (never overwritten).
+- Sync: every change is queued on the phone and sent to the server; each app pulls other people's changes (every 30 s, on opening, on reconnect). Members only ever receive their own data; admin notes and audit log are admin-only.
+- Phone storage: data and the sync queue are kept in IndexedDB (persistent storage is requested); the app works offline and syncs later. Logging out wipes the phone copy.
+- Photos: uploaded to a private Google Drive folder; only the owner and admin can read them; deleting a photo trashes the Drive file.
+- Backup: automatic daily copy of the Google Sheet to Drive folder Sadhana_Backups (last 30 kept), on-demand server backup, and a JSON download (with photos) from the Admin app.
+- Setup steps: docs/SETUP_MARATHI.md.
+

@@ -1,38 +1,41 @@
 # साधना हेल्थ अँड न्यूट्रिशन सेंटर — Wellness Manager PWA
-**Sadhana Health & Nutrition Center**
+**Sadhana Health & Nutrition Center** (logo: Sadhana Health Club)
 
-Two separate installable PWAs:
+Two separate installable apps that stay in sync with each other:
 
 | App | Folder | For |
 |---|---|---|
-| Member app | `user-app/` | Center members |
-| Admin app | `admin-app/` | Center owners / wellness coaches — **Bhagwan Mokal** & **Sadhana Mokal** |
+| Member app (green logo) | `user-app/` | Center members |
+| Admin app (navy logo) | `admin-app/` | Owners / wellness coaches — **Bhagwan Mokal** & **Sadhana Mokal** (admin mobile 9702389779) |
 
-Backend starter: Google Apps Script (`backend/Code.gs`). Database: Google Sheets (`database/GOOGLE_SHEET_SCHEMA.csv`).
+Both apps link to each other (login screens, About & Contact, Admin → More → *Open / Share Member app*, and a WhatsApp login-link button on every member profile).
 
-## Try it now (demo mode)
-Serve the folder over HTTP (PWAs need `http://localhost` or HTTPS), e.g.
+## Two modes
+- **Demo mode** (no `config.js`): sample data, stored only in that browser. Sample logins — member `9800000001` / PIN `1111`, admin `9702389779` / PIN `1234`.
+- **Server mode** (`config.js` with your Apps Script URL): real login, sync between all phones, private photo storage, backups. **Setup steps: `docs/SETUP_MARATHI.md`.**
 
+## Features
+- **Login by mobile number + PIN** for every member; PIN change by the user; **PIN reset by admin** (temporary PIN, user must choose a new one); lock-out after 5 wrong tries; inactive members are blocked.
+- **Admin can edit every member detail** (name, login mobile, DOB, gender, address, emergency contact, status, height, goal); members edit their own profile.
+- **Always in sync:** changes are queued and sent automatically; each app pulls the other's changes (on open, every 30 s, on reconnect). A status pill shows ✓ Synced / Syncing / Offline · N pending.
+- **Saved on the phone:** each app keeps its own persistent storage (IndexedDB) with profile, login session, health data and photos; works offline; a *Sync & phone storage* panel shows usage and lets you request protected storage.
+- **Photos** go to a private Google Drive folder (never public) — only the owner and admin can see them.
+- **Backups:** automatic daily copy of the Google Sheet in Drive (`Sadhana_Backups`), *Back up now* button, and JSON download (with photos) from the phone.
+- Member app: Day-1 baseline, daily update, BMI, goal progress + chart, before/after photos, wellness notes, calendar & appointment requests, notifications, attendance, privacy (download data, revoke photos, request deletion), About & Contact.
+- Admin app: dashboard, members, verification, measurements, follow-up notes, appointments, events, attendance, announcements, reports + CSV, staff (with optional admin login), audit log, settings.
+
+## Project layout
 ```
-python3 -m http.server 8000
+config.example.js      -> copy to config.js (repo root) and paste your Apps Script URL
+user-app/              index.html, css, js (api.js = core/sync, app.js = screens), manifest, service-worker, icons, images
+admin-app/             same structure (navy theme + admin logo)
+backend/Code.gs        Google Apps Script backend (auth, sync, private photos, backup)
+database/              GOOGLE_SHEET_SCHEMA.csv (tabs created automatically by setup())
+docs/                  SETUP_MARATHI.md, MASTER_PROCEDURE.txt, CLAUDE_BUILD_PROMPT.txt
 ```
-- Member app: `http://localhost:8000/user-app/` — sample login **9800000001 / PIN 1111**, or register a new member
-- Admin app: `http://localhost:8000/admin-app/` — admin mobile **9702389779**, PIN **1234** (change it in More → Settings)
 
-In demo mode data is stored in the browser (`localStorage`). Both apps on the same origin share it, so a member registered in the member app appears in the admin app. Reset it from Admin → More → Settings.
-
-## What is included
-- **Member app:** login/register with consent, Day-1 baseline, daily health update (weight, BP, sugar, pulse, waist, hip, steps, water, sleep), BMI, goals, progress chart, before/after photos (consent-based, deletable), wellness notes, calendar & appointment requests, notifications, attendance check-in, privacy (download data, revoke photos, request deletion), **About & Contact**.
-- **Admin app:** login, dashboard, member management & verification, full member profile, add measurements / Day-1 baseline, follow-up notes, appointments (confirm / complete / cancel), center events, attendance, notifications & announcements, reports, CSV exports, staff list, audit log, backup, **About & Contact**.
-- **About & Contact (both apps):** owner photos, roles (वेलनेस कोच), and contact number 9702389779 with Call / WhatsApp buttons. Edit the `CENTER` constant in `js/api.js` (in both apps) to change details; photos are in each app's `images/` folder.
-
-## Going to production
-Read `docs/MASTER_PROCEDURE.txt` and `docs/CLAUDE_BUILD_PROMPT.txt`.
-1. Create the Google Sheet with the tabs/columns from `database/GOOGLE_SHEET_SCHEMA.csv`.
-2. Deploy `backend/Code.gs` as a Web App and set the `ADMIN_KEY` script property.
-3. Put the Web App URL in `API_URL` in `js/api.js` of both apps and replace the `Store` calls with `apiGet` / `apiPost`.
-4. **Add real server-side authentication and per-member authorization before real member data is stored.** The demo PIN checks run in the browser and are not secure. Keep photos in private storage.
-5. Host the two folders on GitHub Pages (HTTPS). Never commit secrets.
+## Updating the apps on GitHub (from a phone)
+Upload the new zip → Actions → *Unzip project* → Run workflow. `config.js` is not in the zip, so your server URL is never overwritten.
 
 ## Disclaimer
 Record keeping and wellness tracking only — not diagnosis or medical treatment.

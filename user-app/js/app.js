@@ -1,9 +1,8 @@
 /* साधना हेल्थ अँड न्यूट्रिशन सेंटर — Member App (demo mode: data stays in this browser) */
 'use strict';
-const SESSION = 'sadhana_user_session';
-let db = Store.load(), tab = 'home', sub = null, authMode = 'login';
+let db = null, tab = 'home', sub = null, authMode = 'login';
 const $c = () => document.getElementById('content');
-const sid = () => localStorage.getItem(SESSION);
+const sid = () => (Auth.current() || {}).memberId || null;
 const cur = () => { db = Store.load(); return db.members.find(m => m.memberId === sid()) || null; };
 const commit = () => Store.save(db);
 const mine = (list, id) => list.filter(x => x.memberId === id);
@@ -11,9 +10,17 @@ const mine = (list, id) => list.filter(x => x.memberId === id);
 function setTab(t) { tab = t; sub = null; render(); window.scrollTo(0, 0); }
 
 function render() {
-  const m = cur();
+  const u = Auth.current(), m = cur();
   document.querySelector('.app').classList.toggle('noauth', !m);
-  if (!m) { authView(); return; }
+  if (u && Auth.mustChange()) {
+    $c().innerHTML = '<div class="section center"><div class="muted">Please set a new PIN to continue.</div></div>';
+    if (!document.querySelector('.modal')) A.changePin(true);
+    return;
+  }
+  if (!m) {
+    if (u && !DEMO_MODE) { $c().innerHTML = '<div class="section center"><div class="muted">Loading your data…</div></div>'; return; }
+    authView(); return;
+  }
   document.querySelectorAll('.nav button').forEach(x => x.classList.toggle('active', x.dataset.tab === tab));
   const un = db.notifications.filter(n => n.memberId === m.memberId && !n.readAt).length;
   const mb = document.querySelector('.nav [data-tab=more]');
@@ -24,46 +31,59 @@ function render() {
 
 /* ---------- login / register ---------- */
 function authView() {
-  const login = authMode === 'login';
-  $c().innerHTML = `<div class="section"><h2>${login ? 'Member Login' : 'New Member Registration'}</h2>
+  const login = authMode === 'login', msg = window.__authMsg || ''; window.__authMsg = '';
+  const wa = 'https://wa.me/91' + CENTER.phone + '?text=' + encodeURIComponent('नमस्कार, माझा PIN विसरलो आहे. कृपया PIN रीसेट करा. माझा मोबाईल नंबर: ');
+  $c().innerHTML = `<div class="section center"><img class="hero-logo" src="images/logo-full.png" alt="Sadhana Health Club" width="120" height="120"></div>
+  <div class="section"><h2>${login ? 'Member Login' : 'New Member Registration'}</h2>
+  ${msg ? `<div class="notice" style="margin-bottom:10px">${esc(msg)}</div>` : ''}
   <form id="af" class="card">${login ? `
     <label>Mobile number<input name="mobile" inputmode="numeric" maxlength="10" autocomplete="username" required></label>
     <label>PIN<input name="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password" required></label>` : `
     <label>Full name<input name="fullName" maxlength="60" required></label>
-    <label>Mobile number<input name="mobile" inputmode="numeric" maxlength="10" required></label>
+    <label>Mobile number (this is your login)<input name="mobile" inputmode="numeric" maxlength="10" required></label>
     <div class="two"><label>Date of birth<input type="date" name="dob" max="${today()}"></label>
     <label>Gender<select name="gender"><option value="F">Female</option><option value="M">Male</option><option value="O">Other</option></select></label></div>
     <label>Create PIN (4–6 digits)<input name="pin" type="password" inputmode="numeric" maxlength="6" required></label>
     <label class="chk"><input type="checkbox" name="consent"><span>I consent to the center storing my health measurements and progress data for wellness tracking. I understand this app does not provide diagnosis or medical treatment.</span></label>`}
     <div class="err"></div><button class="btn wide">${login ? 'Login' : 'Register'}</button></form>
   <p class="center"><a href="#" id="sw">${login ? 'New member? Register here' : 'Already registered? Login'}</a></p>
-  ${DEMO_MODE ? '<div class="notice">Demo mode — sample login: mobile 9800000001, PIN 1111. Data is stored only in this browser.</div>' : ''}</div>`;
+  ${login ? `<p class="center muted">PIN विसरलात? <a href="${wa}" target="_blank" rel="noopener">सेंटरला WhatsApp करा</a> · <a href="tel:+91${esc(CENTER.phone)}">Call</a></p>` : ''}
+  ${DEMO_MODE ? '<div class="notice">Demo mode — sample login: mobile 9800000001, PIN 1111. Data is stored only in this browser.</div>' : ''}
+  <p class="center"><a href="../admin-app/">Center staff login → Admin app</a></p></div>`;
   document.getElementById('sw').onclick = e => { e.preventDefault(); authMode = login ? 'register' : 'login'; authView(); };
-  document.getElementById('af').onsubmit = e => {
+  document.getElementById('af').onsubmit = async e => {
     e.preventDefault();
-    const err = (login ? doLogin : doRegister)(Object.fromEntries(new FormData(e.target)));
-    if (err) e.target.querySelector('.err').textContent = err;
+    const f = e.target, btn = f.querySelector('button.btn'), label = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Please wait…';
+    const err = await (login ? doLogin : doRegister)(Object.fromEntries(new FormData(f)));
+    btn.disabled = false; btn.textContent = label;
+    if (err) f.querySelector('.err').textContent = err;
   };
 }
-function doLogin(d) {
-  db = Store.load();
-  const m = db.members.find(x => x.mobile === (d.mobile || '').trim() && x.pin === d.pin);
-  if (!m) return 'Invalid mobile number or PIN.';
-  localStorage.setItem(SESSION, m.memberId); tab = 'home'; sub = null; render();
+async function doLogin(d) {
+  const err = await Auth.login(d.mobile, d.pin);
+  if (err) return err;
+  tab = 'home'; sub = null; render();
 }
-function doRegister(d) {
-  db = Store.load();
+async function doRegister(d) {
   const name = (d.fullName || '').trim(), mobile = (d.mobile || '').trim();
   if (name.length < 2) return 'Enter your full name.';
   if (!/^[6-9]\d{9}$/.test(mobile)) return 'Enter a valid 10-digit mobile number.';
   if (!/^\d{4,6}$/.test(d.pin || '')) return 'PIN must be 4 to 6 digits.';
   if (d.consent !== 'on') return 'Consent is required to register.';
-  if (db.members.some(x => x.mobile === mobile)) return 'This mobile number is already registered.';
-  const m = { memberId: uid('M'), memberCode: nextCode(db), fullName: name, mobile, pin: d.pin, dob: d.dob || '', gender: d.gender || '', address: '', emergencyName: '', emergencyMobile: '', joinDate: today(), status: 'Pending', consent: true, photoConsent: false, deletionRequested: false, profile: null, createdAt: new Date().toISOString() };
-  db.members.push(m);
-  notify(db, m.memberId, 'Welcome', 'Welcome to ' + BRAND.en + '. Please add your Day-1 baseline.', 'Welcome');
-  if (!commit()) return 'Could not save.';
-  localStorage.setItem(SESSION, m.memberId); tab = 'home'; sub = null; render();
+  if (DEMO_MODE) {
+    db = Store.load();
+    if (db.members.some(x => x.mobile === mobile)) return 'This mobile number is already registered.';
+    const m = { memberId: uid('M'), memberCode: nextCode(db), fullName: name, mobile, pin: d.pin, dob: d.dob || '', gender: d.gender || '', address: '', emergencyName: '', emergencyMobile: '', joinDate: today(), status: 'Pending', consent: true, photoConsent: false, deletionRequested: false, profile: null, createdAt: new Date().toISOString() };
+    db.members.push(m);
+    notify(db, m.memberId, 'Welcome', 'Welcome to ' + BRAND.en + '. Please add your Day-1 baseline.', 'Welcome');
+    if (!commit()) return 'Could not save.';
+    localStorage.setItem('sadhana_user_session', m.memberId);
+  } else {
+    const err = await Auth.register({ fullName: name, mobile, pin: d.pin, dob: d.dob || '', gender: d.gender || '', consent: true });
+    if (err) return err;
+  }
+  tab = 'home'; sub = null; render();
 }
 
 /* ---------- views ---------- */
@@ -99,13 +119,13 @@ function progressView(m) {
   const logs = memberLogs(db, m.memberId).slice(0, 30).reverse(), p = m.profile, L = logs[logs.length - 1];
   const ph = mine(db.photos, m.memberId).sort((a, b) => a.date.localeCompare(b.date));
   const before = ph.find(x => x.type === 'BEFORE'), after = ph.filter(x => x.type === 'AFTER').pop();
-  const cell = (x, t) => `<div><div class="photo">${x ? `<img src="${esc(x.fileUrl)}" alt="${esc(t)} photo">` : esc(t) + ' PHOTO'}</div><small>${x ? fmtDate(x.date) : 'Not added'}</small></div>`;
+  const cell = (x, t) => `<div><div class="photo">${x ? photoImg(x, t + ' photo') : esc(t) + ' PHOTO'}</div><small>${x ? fmtDate(x.date) : 'Not added'}</small></div>`;
   const chg = p && L ? +(L.weight - p.baselineWeight).toFixed(1) : null;
   $c().innerHTML = `<div class="section"><h2>Progress trend</h2><div class="card">${lineChart(logs.map(l => ({ l: fmtDate(l.date), v: l.weight })), p ? p.goalWeight : null)}
   ${chg == null ? '' : `<div class="row" style="margin-top:8px"><span class="muted">Change since Day-1</span><b>${chg > 0 ? '+' : ''}${chg} kg</b></div>`}</div></div>
   <div class="section"><h2>Before & After</h2><div class="photos">${cell(before, 'BEFORE')}${cell(after, 'AFTER')}</div></div>
   <button class="btn secondary wide" data-act="photoAdd">＋ Add progress photo</button>
-  ${ph.length ? `<div class="section"><h2>All photos</h2><div class="photos">${ph.map(x => `<div><div class="photo"><img src="${esc(x.fileUrl)}" alt="${esc(x.type)} photo"></div><div class="row"><small>${esc(x.type)} · ${esc(x.view)} · ${fmtDate(x.date)}</small><button class="btn small danger" data-act="photoDel" data-id="${esc(x.photoId)}">Delete</button></div></div>`).join('')}</div></div>` : ''}
+  ${ph.length ? `<div class="section"><h2>All photos</h2><div class="photos">${ph.map(x => `<div><div class="photo">${photoImg(x, x.type + ' photo')}</div><div class="row"><small>${esc(x.type)} · ${esc(x.view)} · ${fmtDate(x.date)}</small><button class="btn small danger" data-act="photoDel" data-id="${esc(x.photoId)}">Delete</button></div></div>`).join('')}</div></div>` : ''}
   <div class="notice" style="margin-top:14px">Photos are private to you and the center, and only stored with your consent.</div>`;
 }
 
@@ -129,9 +149,9 @@ function moreView(m) {
     const p = m.profile;
     $c().innerHTML = `${back}<div class="section"><h2>My profile</h2><div class="card">
     <p><b>${esc(m.fullName)}</b><br><small>${esc(m.memberCode)} · Joined ${fmtDate(m.joinDate)} · <span class="chip ${m.status === 'Active' ? '' : 'warn'}">${esc(m.status)}</span></small></p>
-    <p class="muted">Mobile ${esc(m.mobile)}<br>DOB ${esc(dash(m.dob))} · Gender ${esc(dash(m.gender))}<br>Address ${esc(dash(m.address))}<br>Emergency contact ${esc(dash(m.emergencyName))} ${esc(m.emergencyMobile)}</p>
+    <p class="muted">Login mobile ${esc(m.mobile)} <small>(to change it, ask the center)</small><br>DOB ${esc(dash(m.dob))} · Gender ${esc(dash(m.gender))}<br>Address ${esc(dash(m.address))}<br>Emergency contact ${esc(dash(m.emergencyName))} ${esc(m.emergencyMobile)}</p>
     ${p ? `<p class="muted">Goal ${esc(p.goalWeight)} kg${p.goalDate ? ' by ' + fmtDate(p.goalDate) : ''}</p>` : ''}
-    <button class="btn secondary" data-act="editProfile">Edit profile & goal</button></div></div>`;
+    <button class="btn secondary" data-act="editProfile">Edit profile & goal</button><button class="btn secondary" data-act="changePin">Change PIN</button></div></div>`;
   } else if (sub === 'notif') {
     const ns = mine(db.notifications, m.memberId).sort((a, b) => b.sentAt.localeCompare(a.sentAt)).slice(0, 40);
     $c().innerHTML = `${back}<div class="section"><div class="row"><h2>Notifications</h2><button class="btn small secondary" data-act="notifAll">Mark all read</button></div><div class="list">
@@ -139,6 +159,9 @@ function moreView(m) {
   } else if (sub === 'attendance') {
     const at = mine(db.attendance, m.memberId).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 40);
     $c().innerHTML = `${back}<div class="section"><h2>Attendance</h2><div class="list">${at.map(a => `<div class="item"><div class="row"><b>${fmtDate(a.date)}</b><span class="chip">${esc(a.status)}</span></div><div class="muted">In ${esc(fmtTime(a.checkIn) || '—')} · Out ${esc(fmtTime(a.checkOut) || '—')}</div></div>`).join('') || '<div class="muted">No visits recorded.</div>'}</div></div>`;
+  } else if (sub === 'storage') {
+    $c().innerHTML = `${back}<div class="section"><h2>Sync & phone storage</h2>${syncPanelHtml()}<div class="notice" style="margin-top:12px">Your data is saved on this phone and on the center's server. Install the app to the home screen so the phone keeps it safe.</div></div>`;
+    fillSyncPanel();
   } else if (sub === 'about') {
     $c().innerHTML = back + aboutHtml();
   } else if (sub === 'privacy') {
@@ -152,7 +175,7 @@ function moreView(m) {
   } else {
     const un = db.notifications.filter(n => n.memberId === m.memberId && !n.readAt).length;
     const row = (k, t, x) => `<div class="item" data-act="sub" data-id="${k}"><div class="row"><b>${t}</b><span class="muted">${x || '›'}</span></div></div>`;
-    $c().innerHTML = `<div class="section"><h2>More</h2><div class="list">${row('profile', '👤 My profile')}${row('notif', '🔔 Notifications', un ? un + ' new' : '')}${row('attendance', '✓ Attendance')}${row('about', 'ℹ️ About & Contact')}${row('privacy', '🔒 Privacy & data')}
+    $c().innerHTML = `<div class="section"><h2>More</h2><div class="list">${row('profile', '👤 My profile')}${row('notif', '🔔 Notifications', un ? un + ' new' : '')}${row('attendance', '✓ Attendance')}${row('storage', '🔄 Sync & phone storage')}${row('about', 'ℹ️ About & Contact')}${row('privacy', '🔒 Privacy & data')}
     <div class="item" data-act="logout"><b>⎋ Logout</b></div></div></div>`;
   }
 }
@@ -161,7 +184,25 @@ function moreView(m) {
 const A = {
   back() { sub = null; render(); },
   sub(id) { sub = id; render(); window.scrollTo(0, 0); },
-  logout() { localStorage.removeItem(SESSION); tab = 'home'; sub = null; authMode = 'login'; render(); },
+  async logout() {
+    const r = await Auth.logout();
+    if (!r.ok && r.pending) {
+      if (!confirm(r.pending + ' change(s) have not reached the server yet and will be lost if you log out. Log out anyway?')) return;
+      await Auth.logout(true);
+    }
+    tab = 'home'; sub = null; authMode = 'login'; render();
+  },
+  syncNow: syncNowAction,
+  keepSafe: keepSafeAction,
+  changePin(forced) {
+    forced = forced === true;
+    modal('Change PIN', `${forced ? '<div class="notice" style="margin-bottom:10px">The center has reset your PIN. Please set a new PIN of your own.</div>' : ''}<label>Current PIN${forced ? ' (the PIN you just logged in with)' : ''}<input name="old" type="password" inputmode="numeric" maxlength="6" required></label>
+    <label>New PIN (4–6 digits)<input name="pin" type="password" inputmode="numeric" maxlength="6" required></label><label>Confirm new PIN<input name="pin2" type="password" inputmode="numeric" maxlength="6" required></label>`, async d => {
+      if (d.pin !== d.pin2) return 'The two new PINs do not match.';
+      const e = await Auth.changePin(d.old, d.pin); if (e) return e;
+      await Sync.run(); render(); toast('PIN changed');
+    }, 'Save PIN', { force: forced });
+  },
   baseline() {
     const m = cur();
     modal('Day-1 baseline', logFieldsHtml(m, baselineExtraHtml()), d => {
@@ -245,9 +286,12 @@ const A = {
       if (!commit()) return 'Could not save.'; render(); toast('Profile updated');
     });
   },
-  export() {
+  async export() {
     const m = cur(), id = m.memberId, safe = Object.assign({}, m); delete safe.pin;
-    download('my-sadhana-data.json', JSON.stringify({ member: safe, logs: memberLogs(db, id), updates: mine(db.updates, id), appointments: mine(db.appointments, id), attendance: mine(db.attendance, id), notifications: mine(db.notifications, id), photos: mine(db.photos, id) }, null, 2), 'application/json');
+    toast('Preparing your data…');
+    const photos = [];
+    for (const p of mine(db.photos, id)) { const q = Object.assign({}, p); q.image = await Media.data(p); delete q.fileUrl; photos.push(q); }
+    download('my-sadhana-data.json', JSON.stringify({ member: safe, logs: memberLogs(db, id), updates: mine(db.updates, id), appointments: mine(db.appointments, id), attendance: mine(db.attendance, id), notifications: mine(db.notifications, id), photos }, null, 2), 'application/json');
   },
   revokePhotos() {
     if (!confirm('Delete all your photos and revoke photo consent?')) return;
@@ -268,4 +312,9 @@ $c().addEventListener('click', e => {
   const f = A[b.dataset.act]; if (f) f(b.dataset.id);
 });
 if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('service-worker.js').catch(() => { }));
-window.onload = () => render();
+window.onload = async () => {
+  await Store.init();
+  setSync(DEMO_MODE ? 'demo' : (navigator.onLine ? 'synced' : 'offline'));
+  render();
+  Sync.start();
+};

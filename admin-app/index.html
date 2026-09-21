@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#075b2b">
+<meta name="theme-color" content="#0b2d5c">
 <meta name="description" content="साधना हेल्थ अँड न्यूट्रिशन सेंटर — Admin App">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">
@@ -15,8 +15,9 @@
 <div class="app admin">
   <header class="top">
     <div class="brand">
-      <div class="logo">सा</div>
+      <img class="logo" src="icons/icon-192.png" alt="Sadhana Health Club logo" width="50" height="50">
       <div><h1>साधना हेल्थ अँड न्यूट्रिशन सेंटर</h1><small>Sadhana Health &amp; Nutrition Center · Admin App</small></div>
+      <span id="sync" class="pill" role="button" onclick="syncNowAction()"></span>
     </div>
   </header>
   <main id="content" class="content"></main>
@@ -28,6 +29,8 @@
     <button data-tab="more" onclick="setTab('more')">☰<br>More</button>
   </nav>
 </div>
+<script>window.APP_KIND='admin';</script>
+<script src="../config.js"></script>
 <script src="js/api.js"></script>
 <script src="js/app.js"></script>
 </body>
